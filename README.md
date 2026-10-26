@@ -1,5 +1,7 @@
 # @zotov/s3uploader
 
+[![CI](https://github.com/modelair/s3uploader/actions/workflows/ci.yml/badge.svg)](https://github.com/modelair/s3uploader/actions/workflows/ci.yml)
+
 Universal file uploader for **AWS S3** and any **S3-compatible** storage — MinIO, Cloudflare R2, DigitalOcean Spaces, Yandex Object Storage, and more. Built on AWS SDK v3, written in TypeScript, ships ESM + CJS + type declarations.
 
 ## Features

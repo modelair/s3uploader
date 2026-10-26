@@ -55,13 +55,6 @@
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   },
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "12.15.0",
-      "onFail": "download"
-    }
-  },
   "packageManager": "pnpm@12.15.0",
   "pnpm": {
     "onlyBuiltDependencies": ["esbuild"]
