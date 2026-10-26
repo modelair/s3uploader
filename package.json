@@ -1,0 +1,72 @@
+{
+  "name": "@zotov/s3uploader",
+  "version": "1.0.0",
+  "description": "Universal file uploader for AWS S3 and any S3-compatible storage (MinIO, Cloudflare R2, DigitalOcean Spaces, Yandex Object Storage)",
+  "author": "Dmitry Zotov",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "s3",
+    "aws",
+    "upload",
+    "uploader",
+    "minio",
+    "r2",
+    "cloudflare",
+    "spaces",
+    "storage",
+    "presigned",
+    "typescript"
+  ],
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.705.0",
+    "@aws-sdk/lib-storage": "^3.705.0",
+    "@aws-sdk/s3-request-presigner": "^3.705.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "aws-sdk-client-mock": "^4.1.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.15.0",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.15.0",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
