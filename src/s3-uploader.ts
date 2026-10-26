@@ -1,5 +1,5 @@
-import { createReadStream } from "node:fs";
-import { basename } from "node:path";
+import { createReadStream } from 'node:fs'
+import { basename } from 'node:path'
 import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
@@ -8,20 +8,20 @@ import {
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
-} from "@aws-sdk/client-s3";
-import { Upload } from "@aws-sdk/lib-storage";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { S3UploaderError } from "./errors.js";
-import { inferContentType } from "./mime.js";
+} from '@aws-sdk/client-s3'
+import { Upload } from '@aws-sdk/lib-storage'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { S3UploaderError } from './errors'
+import { inferContentType } from './mime'
 import type {
   PresignOptions,
   S3Object,
   S3UploaderConfig,
   UploadOptions,
   UploadResult,
-} from "./types.js";
+} from './types'
 
-const MIN_PART_SIZE = 5 * 1024 * 1024; // 5 MiB — S3 minimum part size.
+const MIN_PART_SIZE = 5 * 1024 * 1024 // 5 MiB — S3 minimum part size.
 
 /**
  * Universal uploader for AWS S3 and any S3-compatible storage.
@@ -31,32 +31,32 @@ const MIN_PART_SIZE = 5 * 1024 * 1024; // 5 MiB — S3 minimum part size.
  * const { location } = await uploader.upload({ key: "a.png", body: buffer });
  */
 export class S3Uploader {
-  private readonly client: S3Client;
-  private readonly bucket: string;
-  private readonly publicBaseUrl?: string;
+  private readonly client: S3Client
+  private readonly bucket: string
+  private readonly publicBaseUrl?: string
 
   constructor(config: S3UploaderConfig) {
     if (!config?.bucket) {
-      throw new S3UploaderError("`bucket` is required");
+      throw new S3UploaderError('`bucket` is required')
     }
-    this.bucket = config.bucket;
-    this.publicBaseUrl = config.publicBaseUrl?.replace(/\/+$/, "");
+    this.bucket = config.bucket
+    this.publicBaseUrl = config.publicBaseUrl?.replace(/\/+$/, '')
 
     this.client =
       config.client ??
       new S3Client({
-        region: config.region ?? "us-east-1",
+        region: config.region ?? 'us-east-1',
         ...(config.endpoint ? { endpoint: config.endpoint } : {}),
         ...(config.forcePathStyle !== undefined
           ? { forcePathStyle: config.forcePathStyle }
           : {}),
         ...(config.credentials ? { credentials: config.credentials } : {}),
-      });
+      })
   }
 
   /** The underlying AWS SDK client, for advanced use. */
   get s3(): S3Client {
-    return this.client;
+    return this.client
   }
 
   /**
@@ -64,13 +64,13 @@ export class S3Uploader {
    * Uses multipart transfer automatically for large/streamed bodies.
    */
   async upload(options: UploadOptions): Promise<UploadResult> {
-    const { key, body } = options;
-    if (!key) throw new S3UploaderError("`key` is required");
+    const { key, body } = options
+    if (!key) throw new S3UploaderError('`key` is required')
     if (body === undefined || body === null) {
-      throw new S3UploaderError("`body` is required");
+      throw new S3UploaderError('`body` is required')
     }
 
-    const contentType = options.contentType ?? inferContentType(key);
+    const contentType = options.contentType ?? inferContentType(key)
 
     try {
       const upload = new Upload({
@@ -84,24 +84,26 @@ export class S3Uploader {
           ContentType: contentType,
           ...(options.acl ? { ACL: options.acl } : {}),
           ...(options.metadata ? { Metadata: options.metadata } : {}),
-          ...(options.cacheControl ? { CacheControl: options.cacheControl } : {}),
+          ...(options.cacheControl
+            ? { CacheControl: options.cacheControl }
+            : {}),
           ...(options.contentDisposition
             ? { ContentDisposition: options.contentDisposition }
             : {}),
         },
-      });
+      })
 
-      const result = await upload.done();
-      const etag = "ETag" in result ? result.ETag : undefined;
+      const result = await upload.done()
+      const etag = 'ETag' in result ? result.ETag : undefined
 
       return {
         key,
         bucket: this.bucket,
-        etag: etag?.replace(/"/g, ""),
+        etag: etag?.replace(/"/g, ''),
         location: this.buildLocation(key),
-      };
+      }
     } catch (err) {
-      throw new S3UploaderError(`Failed to upload "${key}"`, err);
+      throw new S3UploaderError(`Failed to upload "${key}"`, err)
     }
   }
 
@@ -111,18 +113,18 @@ export class S3Uploader {
    */
   async uploadFile(
     filePath: string,
-    options?: Partial<Omit<UploadOptions, "body">>,
+    options?: Partial<Omit<UploadOptions, 'body'>>,
   ): Promise<UploadResult> {
-    const key = options?.key ?? basename(filePath);
+    const key = options?.key ?? basename(filePath)
     try {
       return await this.upload({
         ...options,
         key,
         body: createReadStream(filePath),
-      });
+      })
     } catch (err) {
-      if (err instanceof S3UploaderError) throw err;
-      throw new S3UploaderError(`Failed to read file "${filePath}"`, err);
+      if (err instanceof S3UploaderError) throw err
+      throw new S3UploaderError(`Failed to read file "${filePath}"`, err)
     }
   }
 
@@ -131,27 +133,27 @@ export class S3Uploader {
     try {
       await this.client.send(
         new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
-      );
+      )
     } catch (err) {
-      throw new S3UploaderError(`Failed to delete "${key}"`, err);
+      throw new S3UploaderError(`Failed to delete "${key}"`, err)
     }
   }
 
   /** Delete multiple objects in a single request (batched by 1000). */
   async deleteMany(keys: string[]): Promise<void> {
-    if (keys.length === 0) return;
+    if (keys.length === 0) return
     try {
       for (let i = 0; i < keys.length; i += 1000) {
-        const batch = keys.slice(i, i + 1000);
+        const batch = keys.slice(i, i + 1000)
         await this.client.send(
           new DeleteObjectsCommand({
             Bucket: this.bucket,
             Delete: { Objects: batch.map((Key) => ({ Key })) },
           }),
-        );
+        )
       }
     } catch (err) {
-      throw new S3UploaderError("Failed to delete objects", err);
+      throw new S3UploaderError('Failed to delete objects', err)
     }
   }
 
@@ -160,18 +162,18 @@ export class S3Uploader {
     try {
       await this.client.send(
         new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
-      );
-      return true;
+      )
+      return true
     } catch (err) {
-      if (isNotFound(err)) return false;
-      throw new S3UploaderError(`Failed to check "${key}"`, err);
+      if (isNotFound(err)) return false
+      throw new S3UploaderError(`Failed to check "${key}"`, err)
     }
   }
 
   /** List objects under an optional prefix, paginating through all results. */
   async list(prefix?: string): Promise<S3Object[]> {
-    const objects: S3Object[] = [];
-    let continuationToken: string | undefined;
+    const objects: S3Object[] = []
+    let continuationToken: string | undefined
 
     try {
       do {
@@ -183,69 +185,71 @@ export class S3Uploader {
               ? { ContinuationToken: continuationToken }
               : {}),
           }),
-        );
+        )
 
         for (const obj of res.Contents ?? []) {
-          if (!obj.Key) continue;
+          if (!obj.Key) continue
           objects.push({
             key: obj.Key,
             size: obj.Size ?? 0,
             lastModified: obj.LastModified,
-            etag: obj.ETag?.replace(/"/g, ""),
-          });
+            etag: obj.ETag?.replace(/"/g, ''),
+          })
         }
 
         continuationToken = res.IsTruncated
           ? res.NextContinuationToken
-          : undefined;
-      } while (continuationToken);
+          : undefined
+      } while (continuationToken)
 
-      return objects;
+      return objects
     } catch (err) {
-      throw new S3UploaderError("Failed to list objects", err);
+      throw new S3UploaderError('Failed to list objects', err)
     }
   }
 
   /** Generate a presigned URL for downloading (`get`) or uploading (`put`). */
   async getPresignedUrl(options: PresignOptions): Promise<string> {
-    const { key, operation = "get", expiresIn = 900 } = options;
+    const { key, operation = 'get', expiresIn = 900 } = options
     try {
       const command =
-        operation === "put"
+        operation === 'put'
           ? new PutObjectCommand({
               Bucket: this.bucket,
               Key: key,
-              ...(options.contentType ? { ContentType: options.contentType } : {}),
+              ...(options.contentType
+                ? { ContentType: options.contentType }
+                : {}),
             })
-          : new GetObjectCommand({ Bucket: this.bucket, Key: key });
+          : new GetObjectCommand({ Bucket: this.bucket, Key: key })
 
-      return await getSignedUrl(this.client, command, { expiresIn });
+      return await getSignedUrl(this.client, command, { expiresIn })
     } catch (err) {
       throw new S3UploaderError(
         `Failed to presign "${key}" (${operation})`,
         err,
-      );
+      )
     }
   }
 
   /** Release the underlying client's resources. */
   destroy(): void {
-    this.client.destroy();
+    this.client.destroy()
   }
 
   private buildLocation(key: string): string {
-    const encodedKey = key.split("/").map(encodeURIComponent).join("/");
-    if (this.publicBaseUrl) return `${this.publicBaseUrl}/${encodedKey}`;
-    return `s3://${this.bucket}/${key}`;
+    const encodedKey = key.split('/').map(encodeURIComponent).join('/')
+    if (this.publicBaseUrl) return `${this.publicBaseUrl}/${encodedKey}`
+    return `s3://${this.bucket}/${key}`
   }
 }
 
 /** Detect a "not found" error across AWS SDK shapes and S3-compatible backends. */
 function isNotFound(err: unknown): boolean {
-  if (typeof err !== "object" || err === null) return false;
+  if (typeof err !== 'object' || err === null) return false
   const e = err as {
-    name?: string;
-    $metadata?: { httpStatusCode?: number };
-  };
-  return e.name === "NotFound" || e.$metadata?.httpStatusCode === 404;
+    name?: string
+    $metadata?: { httpStatusCode?: number }
+  }
+  return e.name === 'NotFound' || e.$metadata?.httpStatusCode === 404
 }

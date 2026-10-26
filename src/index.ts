@@ -1,6 +1,6 @@
-export { S3Uploader } from "./s3-uploader.js";
-export { S3UploaderError } from "./errors.js";
-export { inferContentType } from "./mime.js";
+export { S3Uploader } from './s3-uploader'
+export { S3UploaderError } from './errors'
+export { inferContentType } from './mime'
 export type {
   PresignOptions,
   S3Credentials,
@@ -9,4 +9,4 @@ export type {
   UploadBody,
   UploadOptions,
   UploadResult,
-} from "./types.js";
+} from './types'
